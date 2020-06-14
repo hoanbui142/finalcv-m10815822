@@ -151,89 +151,90 @@ void Reconstruct3D::checkpoint()
             if (tmp.val[0] > 0 || tmp.val[1] > 0 || tmp.val[2] > 0)
             {   
                 list_l.push_back(cv::Point2i(x,y));
-                std::cout << "x: " << x << " y: " << y << std::endl;
+                //std::cout << "x: " << x << " y: " << y << std::endl;
             }            
         }
     }
-    
 
-    //std::vector<cv::Vec3d> l;  
     cv::Mat F = FMatrix[0].clone();
-    //list_l.push_back(cv::Point2f(174,623));
     //cv::computeCorrespondEpilines(list_l, 1, F, l);
-    //cv::Mat x1t = x1.t();
-    
-    double datapoint1[] = {170, 625, 1};
-    cv::Mat point1 = cv::Mat(1,3, CV_64F,datapoint1);
-    cv::Mat point1t = point1.t();
-    cv::Mat l = F * point1t;
-    std::cout << l << std::endl;
-    //std::cout << "[" << l[0] << ", " << l[1] << ", " << l[2] << "]\n" << std::endl;
-    double a = l.at<double>(0,0);
-    double b = l.at<double>(1,0);
-    double c = l.at<double>(2,0);
-    std::cout << a << ", "<< b << ", "<< c << std::endl;
-    
-    double x0, y0, x01, y01;
-    x0 = 0;
-    y0 = (-c-a*x0)/b;
-    x01 = mask2.cols;
-    y01 = (-c-a*x01)/b;
-    //std::cout<<"error: "<< a * point1.at<int>(0,0) + b * point1.at<int>(0,1) + c <<std::endl;
-	cv::line(test, cv::Point2d(x0,y0), cv::Point2d(x01,y01), cv::Scalar(0,0,255), 1);
-    cv::imwrite("rightImageEpipolarLine.jpg",test);
-    //cv::imshow("right_img",test);
-
-    for (int x = 0; x < mask2.cols; x++)
+    //for (int i, i < list_l.size(),i++)
+    //std::cout << list_l.size() <<std::endl;
+    for (std::size_t i = 0; i < list_l.size(); i++)
     {
-        for (int y = 0; y < mask2.rows; y++)
+        double datapoint1[] = {double(list_l[i].x),double(list_l[i].y), 1};
+        cv::Mat point1 = cv::Mat(1,3, CV_64F,datapoint1);
+        cv::Mat point1t = point1.t();
+        cv::Mat l = F * point1t;
+        //std::cout << l << std::endl;
+        //std::cout << "[" << l[0] << ", " << l[1] << ", " << l[2] << "]\n" << std::endl;
+        double a = l.at<double>(0,0);
+        double b = l.at<double>(1,0);
+        double c = l.at<double>(2,0);
+        //std::cout << a << ", "<< b << ", "<< c << std::endl;
+        
+        double x0, y0, x01, y01;
+        x0 = 0;
+        y0 = (-c-a*x0)/b;
+        x01 = mask2.cols;
+        y01 = (-c-a*x01)/b;
+        //std::cout<<"error: "<< a * point1.at<int>(0,0) + b * point1.at<int>(0,1) + c <<std::endl;
+        cv::line(test, cv::Point2d(x0,y0), cv::Point2d(x01,y01), cv::Scalar(0,0,255), 1);
+        cv::imwrite("rightImageEpipolarLine.jpg",test);
+        //cv::imshow("right_img",test);
+
+        for (int x = 0; x < mask2.cols; x++)
         {
-            cv::Vec3b tmp = mask2.at<cv::Vec3b>(y, x);
-            //std::cout << "color:" << tmp[0] << std::endl;
-            //cv::Vec3b tmp1 = left_img.at<cv::Vec3b>()
-
-            if (std::abs(a*x+b*y+c) < 0.0001)
+            for (int y = 0; y < mask2.rows; y++)
             {
-                if (tmp.val[0] > 0 || tmp.val[1] > 0 || tmp.val[2] > 0)
-                {   
-                    std::cout << "x: " << x << " y: " << y << std::endl;
-                    double datapoint2[] = {double(x), double(y), 1};
-                    cv::Mat point2 = cv::Mat(1,3, CV_64F,datapoint2);
-                    cv::Mat p1t = P1.row(0);
-                    cv::Mat p2t = P1.row(1);
-                    cv::Mat p3t = P1.row(2);
-                    cv::Mat pp1t = P2.row(0);
-                    cv::Mat pp2t = P2.row(1);
-                    cv::Mat pp3t = P2.row(2);
+                cv::Vec3b tmp = mask2.at<cv::Vec3b>(y, x);
+                if (std::abs(a*x+b*y+c) < 0.0001)
+                {
+                    if (tmp.val[0] > 0 || tmp.val[1] > 0 || tmp.val[2] > 0)
+                    {   
+                        //std::cout << "x: " << x << " y: " << y << std::endl;
+                        double datapoint2[] = {double(x), double(y), 1};
+                        cv::Mat point2 = cv::Mat(1,3, CV_64F,datapoint2);
+                        cv::Mat p1t = P1.row(0);
+                        cv::Mat p2t = P1.row(1);
+                        cv::Mat p3t = P1.row(2);
+                        cv::Mat pp1t = P2.row(0);
+                        cv::Mat pp2t = P2.row(1);
+                        cv::Mat pp3t = P2.row(2);
 
-                    cv::Mat A1 = point1.col(0) * p3t - p1t;
-                    cv::Mat A2 = point1.col(1) * p3t - p2t;
-                    cv::Mat A3 = point2.col(0) * pp3t - pp1t;
-                    cv::Mat A4 = point2.col(1) * pp3t - pp2t;
-                    std::cout << "A1 = " << A1 << std::endl;
-                    std::cout << "A2 = " << A2 << std::endl;
-                    std::cout << "A3 = " << A3 << std::endl;
-                    std::cout << "A4 = " << A4 << std::endl;
+                        cv::Mat A1 = point1.col(0) * p3t - p1t;
+                        cv::Mat A2 = point1.col(1) * p3t - p2t;
+                        cv::Mat A3 = point2.col(0) * pp3t - pp1t;
+                        cv::Mat A4 = point2.col(1) * pp3t - pp2t;
+                        //std::cout << "A1 = " << A1 << std::endl;
+                        //std::cout << "A2 = " << A2 << std::endl;
+                        //std::cout << "A3 = " << A3 << std::endl;
+                        //std::cout << "A4 = " << A4 << std::endl;
 
-                    cv::Mat A = A1;
-                    cv::vconcat(A, A2, A);
-                    cv::vconcat(A, A3, A);
-                    cv::vconcat(A, A4, A);
-                    
-                    std::cout << "A = " << A << std::endl;
-                    cv::Mat S, U, V;
-                    cv::SVD::compute(A, S, U, V, cv::SVD::FULL_UV);
-                    cv::Mat Vt = V.t();
-                    std::cout << "V" << std::endl << Vt << std::endl << std::endl;
-                    cv::Mat V_normalize = Vt/Vt.row(3).col(3);
-                    std::cout << "V_normalize" << std::endl << V_normalize << std::endl << std::endl;
-                    double X3d = V_normalize.at<double>(0,3);
-                    double Y3d = V_normalize.at<double>(1,3);
-                    double Z3d = V_normalize.at<double>(2,3);
-                }    
+                        cv::Mat A = A1;
+                        cv::vconcat(A, A2, A);
+                        cv::vconcat(A, A3, A);
+                        cv::vconcat(A, A4, A);
+                        
+                        //std::cout << "A = " << A << std::endl;
+                        cv::Mat S, U, V;
+                        cv::SVD::compute(A, S, U, V, cv::SVD::FULL_UV);
+                        cv::Mat Vt = V.t();
+                        //std::cout << "V" << std::endl << Vt << std::endl << std::endl;
+                        cv::Mat V_normalize = Vt/Vt.row(3).col(3);
+                        //std::cout << "V_normalize" << std::endl << V_normalize << std::endl << std::endl;
+                        double X3d = V_normalize.at<double>(0,3);
+                        double Y3d = V_normalize.at<double>(1,3);
+                        double Z3d = V_normalize.at<double>(2,3);
+
+                        std::cout << "X= " << int(X3d) << " Y= " << int(Y3d) << " Z= " << int(Z3d) << std::endl;
+                    }    
+                }
             }
         }
     }
+    
+    
     cv::waitKey();
 }
 
