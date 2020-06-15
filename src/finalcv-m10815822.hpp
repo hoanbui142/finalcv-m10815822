@@ -6,13 +6,6 @@
 
 #include "opencv2/opencv.hpp"
 
-struct xyzPoint
-{
-    int x;
-    int y;
-    int z;
-};
-
 class Reconstruct3D
 {
 public:
@@ -24,7 +17,9 @@ public:
     std::vector<cv::Mat> FMatrix;
 
     std::vector<cv::Point2i> list_l;
-    std::vector<cv::Point2i> list_r;
+    std::vector<cv::Point2i> list_2d_color;
+    std::vector<cv::Point3i> list_3d_color;
+    std::vector<cv::Point3i> list_3d;
 
     void readParams();
     void printinfo();
