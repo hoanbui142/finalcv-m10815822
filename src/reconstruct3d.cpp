@@ -121,7 +121,7 @@ void Reconstruct3D::checkpoint()
     ///////////////////////////////////////////////
     std::stringstream ssl;
     std::stringstream ssr;
-    for (size_t i = 0;i < 293; i++)
+    for (size_t i = 0; i < 293; i++)
     {
         ssl.str(""); // Clear the string stream
         ssl << "L" << std::setfill('0') << std::setw(3) << i << ".jpg";
@@ -149,96 +149,88 @@ void Reconstruct3D::checkpoint()
 
         
         // Scan 2D point of Left Images
-        for (int x = 0; x < mask1.cols; x++)
+        for (int x = 0; x < left_img.cols; x++)
         {
-            for (int y = 0; y < mask1.rows; y++)
+            for (int y = 0; y < left_img.rows; y++)
             {
-                cv::Vec3b tmp = mask1.at<cv::Vec3b>(y, x);
-                if (tmp.val[0] > 0 || tmp.val[1] > 0 || tmp.val[2] > 0)
+                cv::Vec3b tmp = left_img.at<cv::Vec3b>(y, x);
+                if (tmp.val[0] > 25 || tmp.val[1] > 25 || tmp.val[2] > 25)
                 {   
-                    list_l.push_back(cv::Point2i(x,y));
                     //std::cout << "x: " << x << " y: " << y << std::endl;
+                    double datapoint1[] = {double(x),double(y), 1};
+                    cv::Mat point1 = cv::Mat(1,3, CV_64F,datapoint1);
+                    cv::Mat point1t = point1.t();
+                    cv::Mat l = F * point1t;
+                    //std::cout << l << std::endl;
+                    //std::cout << "[" << l[0] << ", " << l[1] << ", " << l[2] << "]\n" << std::endl;
+                    double a = l.at<double>(0,0);
+                    double b = l.at<double>(1,0);
+                    double c = l.at<double>(2,0);
+                    //std::cout << a << ", "<< b << ", "<< c << std::endl;
+                    
+                    /*double x0, y0, x01, y01;
+                    x0 = 0;
+                    y0 = (-c-a*x0)/b;
+                    x01 = mask2.cols;
+                    y01 = (-c-a*x01)/b;
+                    //std::cout<<"error: "<< a * point1.at<int>(0,0) + b * point1.at<int>(0,1) + c <<std::endl;
+                    cv::line(test, cv::Point2d(x0,y0), cv::Point2d(x01,y01), cv::Scalar(0,0,255), 1);
+                    cv::imwrite("rightImageEpipolarLine.jpg",test);
+                    //cv::imshow("right_img",test);*/
+
+                    for (int x = 0; x < right_img.cols; x++)
+                    {
+                        for (int y = 0; y < right_img.rows; y++)
+                        {
+                            cv::Vec3b tmp = right_img.at<cv::Vec3b>(y, x);
+                            if (std::abs(a*x+b*y+c) < 0.0001)
+                            {
+                                if (tmp.val[0] > 25 || tmp.val[1] > 25 || tmp.val[2] > 25)
+                                {   
+                                    //std::cout << "x: " << x << " y: " << y << std::endl;
+                                    double datapoint2[] = {double(x), double(y), 1};
+                                    cv::Mat point2 = cv::Mat(1,3, CV_64F,datapoint2);
+                                    cv::Mat p1t = P1.row(0);
+                                    cv::Mat p2t = P1.row(1);
+                                    cv::Mat p3t = P1.row(2);
+                                    cv::Mat pp1t = P2.row(0);
+                                    cv::Mat pp2t = P2.row(1);
+                                    cv::Mat pp3t = P2.row(2);
+
+                                    cv::Mat A1 = point1.col(0) * p3t - p1t;
+                                    cv::Mat A2 = point1.col(1) * p3t - p2t;
+                                    cv::Mat A3 = point2.col(0) * pp3t - pp1t;
+                                    cv::Mat A4 = point2.col(1) * pp3t - pp2t;
+                                    //std::cout << "A1 = " << A1 << std::endl;
+                                    //std::cout << "A2 = " << A2 << std::endl;
+                                    //std::cout << "A3 = " << A3 << std::endl;
+                                    //std::cout << "A4 = " << A4 << std::endl;
+
+                                    cv::Mat A = A1;
+                                    cv::vconcat(A, A2, A);
+                                    cv::vconcat(A, A3, A);
+                                    cv::vconcat(A, A4, A);
+                                    
+                                    //std::cout << "A = " << A << std::endl;
+                                    cv::Mat S, U, V;
+                                    cv::SVD::compute(A, S, U, V, cv::SVD::FULL_UV);
+                                    cv::Mat Vt = V.t();
+                                    //std::cout << "V" << std::endl << Vt << std::endl << std::endl;
+                                    cv::Mat V_normalize = Vt/Vt.row(3).col(3);
+                                    //std::cout << "V_normalize" << std::endl << V_normalize << std::endl << std::endl;
+                                    double X3d = V_normalize.at<double>(0,3);
+                                    double Y3d = V_normalize.at<double>(1,3);
+                                    double Z3d = V_normalize.at<double>(2,3);
+                                    list_3d.push_back(cv::Point3f(float(X3d),float(Y3d),float(Z3d)));                            
+                                    //std::cout << int(X3d) << " " << int(Y3d) << " " << int(Z3d) << std::endl;
+                                }    
+                            }
+                        }
+                    }
                 }            
             }
         }
-
-        
-        for (std::size_t i = 0; i < list_l.size(); i++)
-        {
-            double datapoint1[] = {double(list_l[i].x),double(list_l[i].y), 1};
-            cv::Mat point1 = cv::Mat(1,3, CV_64F,datapoint1);
-            cv::Mat point1t = point1.t();
-            cv::Mat l = F * point1t;
-            //std::cout << l << std::endl;
-            //std::cout << "[" << l[0] << ", " << l[1] << ", " << l[2] << "]\n" << std::endl;
-            double a = l.at<double>(0,0);
-            double b = l.at<double>(1,0);
-            double c = l.at<double>(2,0);
-            //std::cout << a << ", "<< b << ", "<< c << std::endl;
-            
-            /*double x0, y0, x01, y01;
-            x0 = 0;
-            y0 = (-c-a*x0)/b;
-            x01 = mask2.cols;
-            y01 = (-c-a*x01)/b;
-            //std::cout<<"error: "<< a * point1.at<int>(0,0) + b * point1.at<int>(0,1) + c <<std::endl;
-            cv::line(test, cv::Point2d(x0,y0), cv::Point2d(x01,y01), cv::Scalar(0,0,255), 1);
-            cv::imwrite("rightImageEpipolarLine.jpg",test);
-            //cv::imshow("right_img",test);*/
-
-            for (int x = 0; x < mask2.cols; x++)
-            {
-                for (int y = 0; y < mask2.rows; y++)
-                {
-                    cv::Vec3b tmp = mask2.at<cv::Vec3b>(y, x);
-                    if (std::abs(a*x+b*y+c) < 0.0001)
-                    {
-                        if (tmp.val[0] > 0 || tmp.val[1] > 0 || tmp.val[2] > 0)
-                        {   
-                            //std::cout << "x: " << x << " y: " << y << std::endl;
-                            double datapoint2[] = {double(x), double(y), 1};
-                            cv::Mat point2 = cv::Mat(1,3, CV_64F,datapoint2);
-                            cv::Mat p1t = P1.row(0);
-                            cv::Mat p2t = P1.row(1);
-                            cv::Mat p3t = P1.row(2);
-                            cv::Mat pp1t = P2.row(0);
-                            cv::Mat pp2t = P2.row(1);
-                            cv::Mat pp3t = P2.row(2);
-
-                            cv::Mat A1 = point1.col(0) * p3t - p1t;
-                            cv::Mat A2 = point1.col(1) * p3t - p2t;
-                            cv::Mat A3 = point2.col(0) * pp3t - pp1t;
-                            cv::Mat A4 = point2.col(1) * pp3t - pp2t;
-                            //std::cout << "A1 = " << A1 << std::endl;
-                            //std::cout << "A2 = " << A2 << std::endl;
-                            //std::cout << "A3 = " << A3 << std::endl;
-                            //std::cout << "A4 = " << A4 << std::endl;
-
-                            cv::Mat A = A1;
-                            cv::vconcat(A, A2, A);
-                            cv::vconcat(A, A3, A);
-                            cv::vconcat(A, A4, A);
-                            
-                            //std::cout << "A = " << A << std::endl;
-                            cv::Mat S, U, V;
-                            cv::SVD::compute(A, S, U, V, cv::SVD::FULL_UV);
-                            cv::Mat Vt = V.t();
-                            //std::cout << "V" << std::endl << Vt << std::endl << std::endl;
-                            cv::Mat V_normalize = Vt/Vt.row(3).col(3);
-                            //std::cout << "V_normalize" << std::endl << V_normalize << std::endl << std::endl;
-                            double X3d = V_normalize.at<double>(0,3);
-                            double Y3d = V_normalize.at<double>(1,3);
-                            double Z3d = V_normalize.at<double>(2,3);
-                            list_3d.push_back(cv::Point3i(int(X3d),int(Y3d),int(Z3d)));                            
-                            //std::cout << int(X3d) << " " << int(Y3d) << " " << int(Z3d) << std::endl;
-                        }    
-                    }
-                }
-            }
-        }
-        list_l.clear();
     }
-    
 }
 
 void Reconstruct3D::exportXYZ()
@@ -255,52 +247,55 @@ void Reconstruct3D::exportXYZ()
 
 void Reconstruct3D::colorizing()
 {
-    list_3d_color.push_back(cv::Point3d(9,-55,178));
-    list_3d_color.push_back(cv::Point3d(2,-36,174));
-    list_3d_color.push_back(cv::Point3d(17,-36,177));
-    list_3d_color.push_back(cv::Point3d(9,-4,163));
-    list_3d_color.push_back(cv::Point3d(-12,-7,158));
-    list_3d_color.push_back(cv::Point3d(10,56,171));
+    list_3d_color.clear();
+    list_2d_color.clear();
+
+    list_3d_color.push_back(cv::Point3f(9,-55,178));
+    list_3d_color.push_back(cv::Point3f(2,-36,174));
+    list_3d_color.push_back(cv::Point3f(17,-36,177));
+    list_3d_color.push_back(cv::Point3f(34,-31,194));
+    list_3d_color.push_back(cv::Point3f(9,-4,163));
+    list_3d_color.push_back(cv::Point3f(-12,-7,158));
+    list_3d_color.push_back(cv::Point3f(10,56,171));
     
-    list_2d_color.push_back(cv::Point2d(2074,1112));
-    list_2d_color.push_back(cv::Point2d(1967,1455));
-    list_2d_color.push_back(cv::Point2d(2191,1452));
-    list_2d_color.push_back(cv::Point2d(2044,1539));
-    list_2d_color.push_back(cv::Point2d(1626,1976));
-    list_2d_color.push_back(cv::Point2d(2039,3455));
+    list_2d_color.push_back(cv::Point2f(2074,1112));
+    list_2d_color.push_back(cv::Point2f(1967,1455));
+    list_2d_color.push_back(cv::Point2f(2191,1452));
+    list_2d_color.push_back(cv::Point2f(2593,1627));
+    list_2d_color.push_back(cv::Point2f(2044,1539));
+    list_2d_color.push_back(cv::Point2f(1626,1976));
+    list_2d_color.push_back(cv::Point2f(2039,3455));
 
     
 
-    cv::Mat texture = cv::imread("Texture.JPG");
-
-    double dataX1[] = {0,0,75,1};
+    double dataX1[] = {double(list_3d_color[0].x),double(list_3d_color[0].y),double(list_3d_color[0].z), 1};
     cv::Mat X1 = cv::Mat(1,4,CV_64F,dataX1);
-    double dataX2[] = {0,0,25,1};
+    double dataX2[] = {double(list_3d_color[1].x),double(list_3d_color[1].y),double(list_3d_color[1].z), 1};
     cv::Mat X2 = cv::Mat(1,4,CV_64F,dataX2);
-    double dataX3[] = {100,0,25,1};
+    double dataX3[] = {double(list_3d_color[2].x),double(list_3d_color[2].y),double(list_3d_color[2].z), 1};
     cv::Mat X3 = cv::Mat(1,4,CV_64F,dataX3);
-    double dataX4[] = {120,90,15,1};
+    double dataX4[] = {double(list_3d_color[3].x),double(list_3d_color[3].y),double(list_3d_color[3].z), 1};
     cv::Mat X4 = cv::Mat(1,4,CV_64F,dataX4);
-    double dataX5[] = {90,50,60,1};
+    double dataX5[] = {double(list_3d_color[4].x),double(list_3d_color[4].y),double(list_3d_color[4].z), 1};
     cv::Mat X5 = cv::Mat(1,4,CV_64F,dataX5);
-    double dataX6[] = {0,100,25,1};
+    double dataX6[] = {double(list_3d_color[5].x),double(list_3d_color[5].y),double(list_3d_color[5].z), 1};
     cv::Mat X6 = cv::Mat(1,4,CV_64F,dataX6);
-    double dataX7[] = {60,40,20,1};
+    double dataX7[] = {double(list_3d_color[6].x),double(list_3d_color[6].y),double(list_3d_color[6].z), 1};
     cv::Mat X7 = cv::Mat(1,4,CV_64F,dataX7);
 
-    double datax1[] = {83,146,1};
+    double datax1[] = {double(list_2d_color[0].x), double(list_2d_color[0].y),1};
     cv::Mat x1 = cv::Mat(1,3,CV_64F,datax1);
-    double datax2[] = {103,259,1};
+    double datax2[] = {double(list_2d_color[1].x), double(list_2d_color[1].y),1};
     cv::Mat x2 = cv::Mat(1,3,CV_64F,datax2);
-    double datax3[] = {346,315,1};
+    double datax3[] = {double(list_2d_color[2].x), double(list_2d_color[2].y),1};
     cv::Mat x3 = cv::Mat(1,3,CV_64F,datax3);
-    double datax4[] = {454,218,1};
+    double datax4[] = {double(list_2d_color[3].x), double(list_2d_color[3].y),1};
     cv::Mat x4 = cv::Mat(1,3,CV_64F,datax4);
-    double datax5[] = {365,161,1};
+    double datax5[] = {double(list_2d_color[4].x), double(list_2d_color[4].y),1};
     cv::Mat x5 = cv::Mat(1,3,CV_64F,datax5);
-    double datax6[] = {218,144,1};
+    double datax6[] = {double(list_2d_color[5].x), double(list_2d_color[5].y),1};
     cv::Mat x6 = cv::Mat(1,3,CV_64F,datax6);
-    double datax7[] = {286,244,1};
+    double datax7[] = {double(list_2d_color[6].x), double(list_2d_color[6].y),1};
     cv::Mat x7 = cv::Mat(1,3,CV_64F,datax7);
 
     cv::Mat zeros = cv::Mat::zeros(1,4,CV_64F);
@@ -308,65 +303,65 @@ void Reconstruct3D::colorizing()
     cv::Mat A1 = X1;
     cv::hconcat(A1,zeros,A1);
     cv::hconcat(A1,(-x1.col(0)*X1),A1);
-    std::cout << "A1 =" << A1 << std::endl;
+    //std::cout << "A1 =" << A1 << std::endl;
     cv::Mat A2 = zeros;
     cv::hconcat(A2,X1,A2);
     cv::hconcat(A2,(-x1.col(1)*X1),A2);
-    std::cout << "A2 =" << A2 << std::endl;
+    //std::cout << "A2 =" << A2 << std::endl;
 
     cv::Mat A3 = X2;
     cv::hconcat(A3,zeros,A3);
     cv::hconcat(A3,(-x2.col(0)*X2),A3);
-    std::cout << "A3 =" << A3 << std::endl;
+    //std::cout << "A3 =" << A3 << std::endl;
     cv::Mat A4 = zeros;
     cv::hconcat(A4,X2,A4);
     cv::hconcat(A4,(-x2.col(1)*X2),A4);
-    std::cout << "A4 =" << A4 << std::endl;
+    //std::cout << "A4 =" << A4 << std::endl;
 
     cv::Mat A5 = X3;
     cv::hconcat(A5,zeros,A5);
     cv::hconcat(A5,(-x3.col(0)*X3),A5);
-    std::cout << "A5 =" << A5 << std::endl;
+    //std::cout << "A5 =" << A5 << std::endl;
     cv::Mat A6 = zeros;
     cv::hconcat(A6,X3,A6);
     cv::hconcat(A6,(-x3.col(1)*X3),A6);
-    std::cout << "A6 =" << A6 << std::endl;
+    //std::cout << "A6 =" << A6 << std::endl;
 
     cv::Mat A7 = X4;
     cv::hconcat(A7,zeros,A7);
     cv::hconcat(A7,(-x4.col(0)*X4),A7);
-    std::cout << "A7 =" << A7 << std::endl;
+    //std::cout << "A7 =" << A7 << std::endl;
     cv::Mat A8 = zeros;
     cv::hconcat(A8,X4,A8);
     cv::hconcat(A8,(-x4.col(1)*X4),A8);
-    std::cout << "A8 =" << A8 << std::endl;
+    //std::cout << "A8 =" << A8 << std::endl;
 
     cv::Mat A9 = X5;
     cv::hconcat(A9,zeros,A9);
     cv::hconcat(A9,(-x5.col(0)*X5),A9);
-    std::cout << "A9 =" << A9 << std::endl;
+    //std::cout << "A9 =" << A9 << std::endl;
     cv::Mat A10 = zeros;
     cv::hconcat(A10,X5,A10);
     cv::hconcat(A10,(-x5.col(1)*X5),A10);
-    std::cout << "A10 =" << A10 << std::endl;
+    //std::cout << "A10 =" << A10 << std::endl;
 
     cv::Mat A11 = X6;
     cv::hconcat(A11,zeros,A11);
     cv::hconcat(A11,(-x6.col(0)*X6),A11);
-    std::cout << "A11 =" << A11 << std::endl;
+    //std::cout << "A11 =" << A11 << std::endl;
     cv::Mat A12 = zeros;
     cv::hconcat(A12,X6,A12);
     cv::hconcat(A12,(-x6.col(1)*X6),A12);
-    std::cout << "A12 =" << A12 << std::endl;
+    //std::cout << "A12 =" << A12 << std::endl;
 
     cv::Mat A13 = X7;
     cv::hconcat(A13,zeros,A13);
     cv::hconcat(A13,(-x7.col(0)*X7),A13);
-    std::cout << "A13 =" << A13 << std::endl;
+    //std::cout << "A13 =" << A13 << std::endl;
     cv::Mat A14 = zeros;
     cv::hconcat(A14,X7,A14);
     cv::hconcat(A14,(-x7.col(1)*X7),A14);
-    std::cout << "A14 =" << A14 << std::endl;
+    //std::cout << "A14 =" << A14 << std::endl;
 
     cv::Mat A = A1;
     cv::vconcat(A,A2,A);
@@ -386,7 +381,7 @@ void Reconstruct3D::colorizing()
     cv::Mat S, U, V;
     cv::SVD::compute(A, S, U, V, cv::SVD::FULL_UV);
     cv::Mat Vt = V.t();
-    std::cout << "V" << std::endl << Vt << std::endl << std::endl;
+    //std::cout << "V" << std::endl << Vt << std::endl << std::endl;
     //cv::Mat V_normalize = Vt/Vt.row(3).col(3);
     //std::cout << "V_normalize" << std::endl << V_normalize << std::endl << std::endl;
     double p1 = Vt.at<double>(0,11);
@@ -408,6 +403,93 @@ void Reconstruct3D::colorizing()
     cv::Mat P = cv::Mat(3,4, CV_64F, dataP);
     cv::Mat P_normalize = P/P.row(2).col(3);
     std::cout << "P= " << std::endl << P_normalize << std::endl << std::endl;
+
+    //P_normalize
+    //list_3d
+    cv::Mat texture = cv::imread("Texture.JPG");
+    std::cout << "W x H: " << texture.cols << " x " << texture.rows << std::endl;
+    /*double datapoint3d[] = {double(list_3dt[0].x), double(list_3dt[0].y), double(list_3dt[0].z), 1};
+    cv::Mat point3d_t = cv::Mat(4,1,CV_64F,datapoint3d);
+    std::cout << "point3d" << point3d_t << std::endl;
+    cv::Mat p2d = P_normalize * point3d_t;
+    cv::Mat p2d_normalize = p2d/p2d.row(2);
+    std::cout << "p2d" << p2d_normalize << std::endl;
+    double x2d = p2d_normalize.at<double>(0,0);
+    double y2d = p2d_normalize.at<double>(1,0);
+    std::cout << "2D coords:" << "x = " << int(x2d) << " y= " << int(y2d) << std::endl;
+    std::cout << list_3dt.size() << std::endl;
+    std::cout << list_3dt[0] << std::endl;*/
+    std::cout << "list = " << list_3d.size() << std::endl;
+    /*std::ifstream xyzFile("reconstruct3D.xyz");
+    std::string line;
     
+    while (std::getline(xyzFile, line))
+    {
+        double xyz[3];
+        for (int i = 0; i < 1; i++)
+        {
+        std::getline(xyzFile, line);
+        std::istringstream iss(line);
+        iss >> xyz[i * 3 + 0] >> xyz[i * 3 + 1] >> xyz[i * 3 + 2];
+        }
+        list_3dt.push_back(cv::Point3d(int(xyz[0]),int(xyz[1]),int(xyz[2])));
+        //std::cout << xyz[0] << " " << xyz[1] << " " << xyz[2] << std::endl;
+    }
+    xyzFile.close();
+    */
+    /*int k = 0;
+    for (std::size_t i = 0; i < list_3dt.size(); i++)
+    {
+        if (list_3dt[i].x == -20 && list_3dt[i].y == 8 && list_3dt[i].z == 168)
+        {
+            k++;
+        }
+        else
+        {
+            continue;
+        }
+    }
+    std::cout << "k = " << k << std::endl;*/
+
+    std::string xyzrgbFileURL("M10815822.xyz");
+    std::ofstream xyzrgbFileStream;
+    xyzrgbFileStream.open(xyzrgbFileURL);
+    for(std::size_t i = 0; i < list_3d.size(); i++)
+    {
+        cv::Mat P_test = P_normalize.clone();
+        //std::cout << "i = " << i << std::endl;
+        double datapoint3d[] = {double(list_3d[i].x), double(list_3d[i].y), double(list_3d[i].z), 1};
+        cv::Mat point3d_t = cv::Mat(4,1,CV_64F,datapoint3d);
+        cv::Mat point3d_t_t = point3d_t.t();
+        //std::cout << "point3d: " << point3d_t_t << std::endl;
+        cv::Mat p2d = P_test * point3d_t;
+        cv::Mat p2d_normalize = p2d/p2d.row(2);
+        //std::cout << "p2d: " << p2d_normalize << std::endl;
+        double x2d = p2d_normalize.at<double>(0,0);
+        //std::cout << "x2d: " << x2d << std::endl;
+        double y2d = p2d_normalize.at<double>(1,0);
+        //std::cout << "y2d: " << y2d << std::endl;
+        //std::cout << "x " << int(x2d) << " y " << int(y2d) << std::endl;
+
+        if (x2d < 0. || y2d < 0.)
+        {
+            std::cout << "Error" << std::endl;
+        }
+        else if (x2d > 3792. || y2d > 5056.)
+        {
+            std::cout << "Error" << std::endl;
+        }
+        else
+        {
+            cv::Vec3b tmp = texture.at<cv::Vec3b>(int(y2d), int(x2d)); 
+
+            xyzrgbFileStream << list_3d[i].x << " " << list_3d[i].y << " " << list_3d[i].z 
+                                            << " " << int(tmp.val[2]) << " " << int(tmp.val[1]) << " " << int(tmp.val[0]) << std::endl;
+        }
+               
+        point3d_t.release();
+    }
+    xyzrgbFileStream.close();  
     
+
 }
