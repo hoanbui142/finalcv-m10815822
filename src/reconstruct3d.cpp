@@ -149,11 +149,11 @@ void Reconstruct3D::checkpoint()
 
         
         // Scan 2D point of Left Images
-        for (int x = 0; x < left_img.cols; x++)
+        for (int x = 0; x < mask1.cols; x++)
         {
-            for (int y = 0; y < left_img.rows; y++)
+            for (int y = 0; y < mask1.rows; y++)
             {
-                cv::Vec3b tmp = left_img.at<cv::Vec3b>(y, x);
+                cv::Vec3b tmp = mask1.at<cv::Vec3b>(y, x);
                 if (tmp.val[0] > 25 || tmp.val[1] > 25 || tmp.val[2] > 25)
                 {   
                     //std::cout << "x: " << x << " y: " << y << std::endl;
@@ -178,11 +178,11 @@ void Reconstruct3D::checkpoint()
                     cv::imwrite("rightImageEpipolarLine.jpg",test);
                     //cv::imshow("right_img",test);*/
 
-                    for (int x = 0; x < right_img.cols; x++)
+                    for (int x = 0; x < mask2.cols; x++)
                     {
-                        for (int y = 0; y < right_img.rows; y++)
+                        for (int y = 0; y < mask2.rows; y++)
                         {
-                            cv::Vec3b tmp = right_img.at<cv::Vec3b>(y, x);
+                            cv::Vec3b tmp = mask2.at<cv::Vec3b>(y, x);
                             if (std::abs(a*x+b*y+c) < 0.0001)
                             {
                                 if (tmp.val[0] > 25 || tmp.val[1] > 25 || tmp.val[2] > 25)
@@ -250,21 +250,23 @@ void Reconstruct3D::colorizing()
     list_3d_color.clear();
     list_2d_color.clear();
 
-    list_3d_color.push_back(cv::Point3f(9,-55,178));
-    list_3d_color.push_back(cv::Point3f(2,-36,174));
-    list_3d_color.push_back(cv::Point3f(17,-36,177));
-    list_3d_color.push_back(cv::Point3f(34,-31,194));
-    list_3d_color.push_back(cv::Point3f(9,-4,163));
-    list_3d_color.push_back(cv::Point3f(-12,-7,158));
-    list_3d_color.push_back(cv::Point3f(10,56,171));
+    list_3d_color.push_back(cv::Point3f(11,-55,178));
+    list_3d_color.push_back(cv::Point3f(1,-37,176));
+    list_3d_color.push_back(cv::Point3f(8,-32,163));
+    list_3d_color.push_back(cv::Point3f(17,-37,176));
+    list_3d_color.push_back(cv::Point3f(-11,-9,161));
+    list_3d_color.push_back(cv::Point3f(9,35,164));
+    list_3d_color.push_back(cv::Point3f(10,58,173));
     
-    list_2d_color.push_back(cv::Point2f(2074,1112));
-    list_2d_color.push_back(cv::Point2f(1967,1455));
-    list_2d_color.push_back(cv::Point2f(2191,1452));
-    list_2d_color.push_back(cv::Point2f(2593,1627));
-    list_2d_color.push_back(cv::Point2f(2044,1539));
-    list_2d_color.push_back(cv::Point2f(1626,1976));
-    list_2d_color.push_back(cv::Point2f(2039,3455));
+    
+    list_2d_color.push_back(cv::Point2f(2089,1108));
+    list_2d_color.push_back(cv::Point2f(1965,1456));
+    list_2d_color.push_back(cv::Point2f(2028,1529));
+    list_2d_color.push_back(cv::Point2f(2199,1451));
+    list_2d_color.push_back(cv::Point2f(1622,1972));
+    list_2d_color.push_back(cv::Point2f(2014,3099));
+    list_2d_color.push_back(cv::Point2f(2040,3481));
+
 
     
 
