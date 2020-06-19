@@ -97,6 +97,8 @@ void Reconstruct3D::printinfo()
 
 void Reconstruct3D::checkpoint()
 {
+    list_3d.clear();
+
     //Calculate P1
     cv::Mat K1 = LeftIntrinsic[0].clone();
     cv::Mat Rt1 = LeftExtrinsic[0].clone();
@@ -135,25 +137,56 @@ void Reconstruct3D::checkpoint()
 
         double thresh = 50;   //threshold value with 50 is fixed threholding value.
         double maxValue = 255; //maximum value that can be assigned out to the output of threholding
+    
         cv::Mat mask1;
         cv::threshold(left_img, mask1, thresh, maxValue, cv::THRESH_BINARY);
-        cv::imwrite("Mask1.jpg", mask1);
+        //cv::imwrite("Mask1.jpg", mask1);
         cv::Mat mask2;
         cv::threshold(right_img, mask2, thresh, maxValue, cv::THRESH_BINARY);
-        cv::imwrite("Mask2.jpg", mask2);
-        cv::Mat test = mask2.clone();
+        //cv::imwrite("Mask2.jpg", mask2);
+
         //cv::imshow("left_img",mask1);
         //cv::imshow("right_img",mask2);
         //cv::imshow("left_img",left_img);
         //cv::imshow("right_img",right_img);
 
+        cv::Mat bgrl[3];
+        cv::split(left_img,bgrl);
+        cv::Mat bgrr[3];
+        cv::split(right_img,bgrr);
+        //cv::imwrite("b.jpg", bgrl[0]);
+        //cv::imwrite("g.jpg", bgrl[1]);
+        //cv::imwrite("r.jpg", bgrl[2]);
         
-        // Scan 2D point of Left Images
-        for (int x = 0; x < mask1.cols; x++)
+        cv::Mat g_left = cv::Mat::zeros(cv::Size(left_img.cols, left_img.rows), CV_8UC1);
+        cv::Mat g_right = cv::Mat::zeros(cv::Size(right_img.cols, right_img.rows), CV_8UC1);
+
+        cv::Mat thresh1, thresh2;
+        cv::threshold(bgrl[2], thresh1, thresh, maxValue, cv::THRESH_TOZERO);
+        cv::threshold(bgrr[2], thresh2, thresh, maxValue, cv::THRESH_TOZERO);
+        std::vector<cv::Mat> bgrl_thresh;
+        bgrl_thresh.push_back(g_left);
+        bgrl_thresh.push_back(g_left);
+        bgrl_thresh.push_back(thresh1);
+        std::vector<cv::Mat> bgrr_thresh;
+        bgrr_thresh.push_back(g_right);
+        bgrr_thresh.push_back(g_right);
+        bgrr_thresh.push_back(thresh2);
+        cv::Mat left_red;
+        cv::Mat right_red;
+        cv::merge(bgrl_thresh, left_red);
+        cv::merge(bgrr_thresh, right_red);
+
+
+
+
+        
+        // Scan 2D point to get 3D correspondence points
+        for (int x = 0; x < left_red.cols; x++)
         {
-            for (int y = 0; y < mask1.rows; y++)
+            for (int y = 0; y < left_red.rows; y++)
             {
-                cv::Vec3b tmp = mask1.at<cv::Vec3b>(y, x);
+                cv::Vec3b tmp = left_red.at<cv::Vec3b>(y, x);
                 if (tmp.val[0] > 25 || tmp.val[1] > 25 || tmp.val[2] > 25)
                 {   
                     //std::cout << "x: " << x << " y: " << y << std::endl;
@@ -178,12 +211,12 @@ void Reconstruct3D::checkpoint()
                     cv::imwrite("rightImageEpipolarLine.jpg",test);
                     //cv::imshow("right_img",test);*/
 
-                    for (int x = 0; x < mask2.cols; x++)
+                    for (int x = 0; x < right_red.cols; x++)
                     {
-                        for (int y = 0; y < mask2.rows; y++)
+                        for (int y = 0; y < right_red.rows; y++)
                         {
-                            cv::Vec3b tmp = mask2.at<cv::Vec3b>(y, x);
-                            if (std::abs(a*x+b*y+c) < 0.0001)
+                            cv::Vec3b tmp = right_red.at<cv::Vec3b>(y, x);
+                            if (std::abs(a*x+b*y+c) < 0.01)
                             {
                                 if (tmp.val[0] > 25 || tmp.val[1] > 25 || tmp.val[2] > 25)
                                 {   
@@ -221,8 +254,20 @@ void Reconstruct3D::checkpoint()
                                     double X3d = V_normalize.at<double>(0,3);
                                     double Y3d = V_normalize.at<double>(1,3);
                                     double Z3d = V_normalize.at<double>(2,3);
-                                    list_3d.push_back(cv::Point3f(float(X3d),float(Y3d),float(Z3d)));                            
-                                    //std::cout << int(X3d) << " " << int(Y3d) << " " << int(Z3d) << std::endl;
+                                    cv::Point3f p = cv::Point3f(float(X3d),float(Y3d),float(Z3d));
+                                    if (std::abs(Y3d) > 130.)
+                                    {
+                                        continue;
+                                    }
+                                    else if (exist(list_3d,list_3d.size(),p))
+                                    {
+                                        continue;
+                                    }
+                                    else
+                                    {
+                                        list_3d.push_back(cv::Point3f(float(X3d),float(Y3d),float(Z3d)));                            
+                                        //std::cout << int(X3d) << " " << int(Y3d) << " " << int(Z3d) << std::endl;    
+                                    }
                                 }    
                             }
                         }
@@ -410,48 +455,9 @@ void Reconstruct3D::colorizing()
     //list_3d
     cv::Mat texture = cv::imread("Texture.JPG");
     std::cout << "W x H: " << texture.cols << " x " << texture.rows << std::endl;
-    /*double datapoint3d[] = {double(list_3dt[0].x), double(list_3dt[0].y), double(list_3dt[0].z), 1};
-    cv::Mat point3d_t = cv::Mat(4,1,CV_64F,datapoint3d);
-    std::cout << "point3d" << point3d_t << std::endl;
-    cv::Mat p2d = P_normalize * point3d_t;
-    cv::Mat p2d_normalize = p2d/p2d.row(2);
-    std::cout << "p2d" << p2d_normalize << std::endl;
-    double x2d = p2d_normalize.at<double>(0,0);
-    double y2d = p2d_normalize.at<double>(1,0);
-    std::cout << "2D coords:" << "x = " << int(x2d) << " y= " << int(y2d) << std::endl;
-    std::cout << list_3dt.size() << std::endl;
-    std::cout << list_3dt[0] << std::endl;*/
-    std::cout << "list = " << list_3d.size() << std::endl;
-    /*std::ifstream xyzFile("reconstruct3D.xyz");
-    std::string line;
     
-    while (std::getline(xyzFile, line))
-    {
-        double xyz[3];
-        for (int i = 0; i < 1; i++)
-        {
-        std::getline(xyzFile, line);
-        std::istringstream iss(line);
-        iss >> xyz[i * 3 + 0] >> xyz[i * 3 + 1] >> xyz[i * 3 + 2];
-        }
-        list_3dt.push_back(cv::Point3d(int(xyz[0]),int(xyz[1]),int(xyz[2])));
-        //std::cout << xyz[0] << " " << xyz[1] << " " << xyz[2] << std::endl;
-    }
-    xyzFile.close();
-    */
-    /*int k = 0;
-    for (std::size_t i = 0; i < list_3dt.size(); i++)
-    {
-        if (list_3dt[i].x == -20 && list_3dt[i].y == 8 && list_3dt[i].z == 168)
-        {
-            k++;
-        }
-        else
-        {
-            continue;
-        }
-    }
-    std::cout << "k = " << k << std::endl;*/
+    std::cout << "list = " << list_3d.size() << std::endl;
+       
 
     std::string xyzrgbFileURL("M10815822.xyz");
     std::ofstream xyzrgbFileStream;
@@ -485,13 +491,11 @@ void Reconstruct3D::colorizing()
         {
             cv::Vec3b tmp = texture.at<cv::Vec3b>(int(y2d), int(x2d)); 
 
-            xyzrgbFileStream << list_3d[i].x << " " << list_3d[i].y << " " << list_3d[i].z 
+            xyzrgbFileStream << int(list_3d[i].x) << " " << int(list_3d[i].y) << " " << int(list_3d[i].z)
                                             << " " << int(tmp.val[2]) << " " << int(tmp.val[1]) << " " << int(tmp.val[0]) << std::endl;
         }
                
         point3d_t.release();
     }
     xyzrgbFileStream.close();  
-    
-
 }

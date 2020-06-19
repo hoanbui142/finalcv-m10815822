@@ -27,5 +27,18 @@ public:
     void exportXYZ();
     void colorizing();
     void exportXYZRGB();   
-
+private:
+    bool exist(std::vector<cv::Point3f> a, size_t n, cv::Point3f p) 
+    { 
+        // Count intersections of the above line with sides of polygon 
+        for (size_t i = 0; i < a.size(); i++)
+        {
+            if (p == a[i])
+            {
+                return true;
+                break;
+            }
+        }
+        return false;
+    } 
 };
