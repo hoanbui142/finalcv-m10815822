@@ -6,7 +6,7 @@ int main(int argc, char const *argv[])
     reconstruct3d.readParams();
     reconstruct3d.printinfo();
     reconstruct3d.checkpoint();
-    //reconstruct3d.exportXYZ();
+    reconstruct3d.exportXYZ();
     reconstruct3d.colorizing();
 
     return 0;

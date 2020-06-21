@@ -16,7 +16,6 @@ public:
     std::vector<cv::Mat> RightExtrinsic;
     std::vector<cv::Mat> FMatrix;
 
-    std::vector<cv::Point2f> list_l;
     std::vector<cv::Point2f> list_2d_color;
     std::vector<cv::Point3f> list_3d_color;
     std::vector<cv::Point3f> list_3d;
@@ -26,11 +25,10 @@ public:
     void checkpoint();
     void exportXYZ();
     void colorizing();
-    void exportXYZRGB();   
 private:
     bool exist(std::vector<cv::Point3f> a, size_t n, cv::Point3f p) 
     { 
-        // Count intersections of the above line with sides of polygon 
+        // Count the same coordinates to pass
         for (size_t i = 0; i < a.size(); i++)
         {
             if (p == a[i])
